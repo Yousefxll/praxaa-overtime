@@ -170,9 +170,19 @@ i[data-ic]{display:inline-flex;align-items:center;justify-content:center;line-he
 #unitsWrap input.uname:hover{border-color:var(--border);background:#fff}
 #unitsWrap input.uname:focus{border-color:var(--primary-light);background:#fff}
 #unitsWrap tr.u-active input.uname{color:var(--cinnabar);font-weight:600}
+.u-pick{display:none}
+@media(max-width:760px){
+  .u-pick{display:flex;align-items:center;justify-content:center;flex:none;
+    width:42px;height:42px;border-radius:9px;cursor:pointer;
+    background:rgba(255,255,255,.10);border:1px solid rgba(245,243,239,.22);color:#F5F3EF}
+  #unitsWrap tr.u-active .u-pick{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.45);color:#fff}
+  .u-pick .ic{width:1.25em;height:1.25em}
+}
 #unitsWrap tr.u-active td:first-child::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--cinnabar)}
 #unitsWrap td:first-child{position:sticky}
 .hint{font-size:.72rem;color:var(--text-light);font-family:var(--font-mono);letter-spacing:.02em}
+.btn-txt-del{display:none}
+@media(max-width:760px){.btn-txt-del{display:inline}}
 .footer{padding:26px 32px 40px;text-align:center;font-size:.7rem;color:var(--text-light);font-family:var(--font-mono);letter-spacing:.08em}
 /* ═══════════ A4 PRINT SHEET — mirrors the workbook layout ═══════════ */
 #printsheet{display:none}
@@ -213,37 +223,112 @@ i[data-ic]{display:inline-flex;align-items:center;justify-content:center;line-he
   body{background:#fff;font-size:10px}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
+/* the collapsed controls summary is a phone affordance only */
+.ctl-summary{display:none}
+.tl-short{display:none}
+
 @media(max-width:760px){
-  .hero .ctx{position:static;text-align:left;margin-bottom:16px}
-  .hero{padding:22px 20px}
-  .hero .verdict{font-size:1.85rem;line-height:1.15}
-  .hero .verdict small{display:block;margin-left:0;margin-top:10px;transform:none}
-  .hero p{font-size:.95rem}
-  .tab-content{padding:18px 14px 48px}
-  .card{padding:18px 16px}
-  .header{padding:11px 14px;flex-wrap:wrap;gap:10px}
-  .tagline,.hdr-div{display:none}
-  .header .actions{width:100%;justify-content:flex-start}
-  .brand-name{font-size:1.15rem}
-  .tab-btn{padding:11px 13px;font-size:.78rem}
-  .controls{padding:16px;grid-template-columns:repeat(auto-fit,minmax(135px,1fr))}
+  /* ── 1. compact header: one row, icon-only actions (was 100px) ── */
+  .header{padding:9px 14px}
+  .tagline,.hdr-div,.brand-sub{display:none}
+  .brand-name{font-size:1.18rem}
+  .brand-mark{width:32px;height:32px;border-radius:9px}
+  .brand-mark svg{width:22px;height:22px}
+  .btn-txt{display:none}
+  .header .actions .btn{padding:9px 11px;min-height:40px}
+
+  /* ── 2. tabs move to the bottom, in thumb reach ── */
+  .tab-nav{position:fixed;bottom:0;left:0;right:0;z-index:200;
+    background:rgba(245,243,239,.96);backdrop-filter:saturate(180%) blur(12px);
+    border-top:1px solid var(--ash);border-bottom:none;padding:0;overflow:visible;
+    box-shadow:0 -2px 12px -6px rgba(20,20,24,.18);
+    padding-bottom:env(safe-area-inset-bottom,0)}
+  .tab-btn{flex:1;flex-direction:column;gap:4px;padding:9px 2px 8px;font-size:.63rem;
+    letter-spacing:.02em;border-bottom:none;min-height:52px;justify-content:center}
+  .tab-btn.active{border-bottom:none}
+  .tab-btn.active .ic{transform:scale(1.06)}
+  .tab-btn .ic{width:1.4em;height:1.4em}
+  .tl-long{display:none}
+  .tl-short{display:inline}
+  .tab-content{padding:14px 14px 88px}          /* clear the bottom bar */
+
+  /* ── 3. controls collapse so the verdict is the first thing you see ── */
+  .ctl-summary{display:flex;width:100%;align-items:center;justify-content:space-between;
+    gap:12px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);
+    padding:12px 14px;margin-bottom:14px;box-shadow:var(--shadow);cursor:pointer;
+    font-family:var(--font-sans);text-align:left;min-height:52px;color:var(--text)}
+  .cs-text{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .cs-text b{font-size:.98rem;font-weight:600;letter-spacing:-.01em}
+  .cs-text span{font-family:var(--font-mono);font-size:.68rem;color:var(--text-light);
+    letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cs-chev{flex:none;width:34px;height:34px;border-radius:9px;background:var(--bone);
+    border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--cinnabar)}
+  .ctl-summary[aria-expanded="true"] .cs-chev{background:var(--cinnabar);color:#fff;border-color:var(--cinnabar)}
+  .controls{padding:16px;grid-template-columns:1fr 1fr;gap:12px 12px}
+  .controls.collapsed{display:none}
   .ctl-note{flex-direction:column;gap:6px}
-  .kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
-  .kpi{padding:15px 16px}
-  .kpi .val{font-size:1.55rem}
-  /* iOS zooms the page when a control smaller than 16px gets focus */
-  select,input[type=number],input[type=date],input[type=text],.editable input{font-size:16px}
-  #unitsWrap th:first-child,#unitsWrap td:first-child{min-width:118px;max-width:118px}
-  #unitsWrap input.uname{font-size:15px}
-  #unitsWrap{max-height:none}
+
+  /* ── 4. content sizing ── */
+  .card{padding:17px 15px}
+  .hero{padding:22px 18px}
+  .hero .ctx{display:none}                       /* unit + month already in the summary bar */
+  .hero .verdict{font-size:1.9rem;line-height:1.12}
+  .hero .verdict small{display:block;margin-left:0;margin-top:11px;transform:none}
+  .hero p{font-size:.95rem}
+  .kpis{grid-template-columns:1fr 1fr;gap:11px}
+  .kpi{padding:14px 15px}
+  .kpi .val{font-size:1.5rem}
+  .kpi .foot{font-size:.68rem}
   .gapbar{height:30px}
   .gaplegend{flex-direction:column;gap:7px}
+
+  /* ── 5. tap targets ≥44px, and 16px text so iOS never zooms on focus ── */
+  select,input[type=number],input[type=date],input[type=text],.editable input{font-size:16px;min-height:44px}
+  .btn{min-height:44px}
+  .btn-sm{min-height:40px;padding:8px 13px}
+
+  /* ── 6. units database: one card per unit, no horizontal scrolling at all ── */
+  #unitsWrap{overflow:visible;max-height:none;border:none;border-radius:0}
+  #unitsWrap table{min-width:0;display:block}
+  #unitsWrap thead{display:none}
+  #unitsWrap tbody{display:block}
+  #unitsWrap tbody tr{display:block;background:var(--card);border:1px solid var(--border);
+    border-radius:var(--radius-lg);margin-bottom:13px;overflow:hidden;box-shadow:var(--shadow)}
+  #unitsWrap tbody tr:nth-child(even){background:var(--card)}
+  #unitsWrap tr.u-active{border-color:var(--cinnabar);box-shadow:0 0 0 1px var(--cinnabar),var(--shadow)}
+  /* only the active unit is expanded — the rest stay one-line, so the list is scannable */
+  #unitsWrap tbody tr:not(.u-active) td:not(:first-child){display:none}
+  /* card header — the unit name + the open/active chevron */
+  #unitsWrap td:first-child{position:static;display:flex;align-items:center;gap:9px;
+    min-width:0;max-width:none;background:var(--ink);padding:9px 11px;box-shadow:none}
+  #unitsWrap tbody tr:nth-child(even) td:first-child{background:var(--ink)}
+  #unitsWrap tr.u-active td:first-child{background:var(--cinnabar)}
+  #unitsWrap tr.u-active td:first-child::before{display:none}
+  #unitsWrap input.uname{color:#F5F3EF;background:rgba(255,255,255,.07);
+    border-color:rgba(245,243,239,.22);font-size:16px;font-weight:600;width:100%;min-height:42px}
+  #unitsWrap tr.u-active input.uname{color:#fff;font-weight:700}
+  /* every other cell becomes a label / field row */
+  #unitsWrap td:not(:first-child){display:grid;grid-template-columns:1fr 118px;
+    align-items:center;gap:10px;padding:6px 12px;border-bottom:1px solid var(--border);
+    background:transparent;text-align:left}
+  #unitsWrap td:not(:first-child)::before{content:attr(data-label);font-family:var(--font-mono);
+    font-size:.68rem;letter-spacing:.05em;text-transform:uppercase;color:var(--text-light);line-height:1.35}
+  #unitsWrap td.editable{background:transparent}
+  #unitsWrap td.editable input{min-width:0;width:100%}
+  #unitsWrap td.u-rf{font-family:var(--font-mono);text-align:right;padding-right:16px}
+  #unitsWrap td.u-del{grid-template-columns:1fr;border-bottom:none;padding:11px 12px;background:var(--row-alt)}
+  #unitsWrap td.u-del::before{display:none}
+  #unitsWrap td.u-del .btn{width:100%;justify-content:center}
+  /* group separators inside the card */
+  #unitsWrap td[data-group]{border-top:1px solid var(--ash);margin-top:2px}
+  #unitsWrap td[data-group]::after{content:attr(data-group);position:absolute}
 }
 /* momentum scrolling for the wide tables on touch devices */
 .tblwrap{-webkit-overflow-scrolling:touch}
-@media(hover:none){
-  .tblwrap{overflow-x:auto}
-  #unitsWrap input.uname{border-color:var(--border);background:#fff}  /* no hover on touch — always show the field */
+/* touch has no hover, so the name field must always look editable — but only on the
+   wide table; the phone card header styles it on a dark background itself */
+@media(hover:none) and (min-width:761px){
+  #unitsWrap input.uname{border-color:var(--border);background:#fff}
 }
 </style>
 </head>
@@ -266,23 +351,28 @@ i[data-ic]{display:inline-flex;align-items:center;justify-content:center;line-he
     <span class="tagline">clinical ops, quietly.</span>
   </div>
   <div class="actions">
-    <button class="btn btn-sm btn-ghost" onclick="window.print()" title="Print / PDF"><i data-ic="print"></i> Print</button>
-    <button class="btn btn-sm btn-ghost" onclick="exportCSV()" title="Export CSV"><i data-ic="file-csv"></i> Export</button>
+    <button class="btn btn-sm btn-ghost" onclick="window.print()" title="Print / PDF"><i data-ic="print"></i> <span class="btn-txt">Print</span></button>
+    <button class="btn btn-sm btn-ghost" onclick="exportCSV()" title="Export CSV"><i data-ic="file-csv"></i> <span class="btn-txt">Export</span></button>
     <button class="btn btn-sm btn-ghost" onclick="resetAll()" title="Restore defaults"><i data-ic="rotate-left"></i></button>
   </div>
 </div>
 <div class="tab-nav">
-  <button class="tab-btn active" data-tab="model"><i data-ic="scale-balanced"></i> Justification</button>
-  <button class="tab-btn" data-tab="basis"><i data-ic="sliders"></i> Basis &amp; Workings</button>
-  <button class="tab-btn" data-tab="units"><i data-ic="hospital"></i> Units Database</button>
-  <button class="tab-btn" data-tab="holidays"><i data-ic="calendar-check"></i> Holidays</button>
+  <button class="tab-btn active" data-tab="model"><i data-ic="scale-balanced"></i> <span class="tl-long">Justification</span><span class="tl-short">Verdict</span></button>
+  <button class="tab-btn" data-tab="basis"><i data-ic="sliders"></i> <span class="tl-long">Basis &amp; Workings</span><span class="tl-short">Basis</span></button>
+  <button class="tab-btn" data-tab="units"><i data-ic="hospital"></i> <span class="tl-long">Units Database</span><span class="tl-short">Units</span></button>
+  <button class="tab-btn" data-tab="holidays"><i data-ic="calendar-check"></i> <span class="tl-long">Holidays</span><span class="tl-short">Holidays</span></button>
 </div>
 </div>
 
 <!-- ══════════ TAB 1 — JUSTIFICATION ══════════ -->
 <div class="tab-content active" id="tab-model">
 
-  <div class="controls no-print">
+  <button class="ctl-summary no-print" id="ctlSummary" onclick="toggleControls()" aria-expanded="false">
+    <span class="cs-text"><b id="cs_unit">—</b><span id="cs_rest">—</span></span>
+    <span class="cs-chev"><i data-ic="sliders"></i></span>
+  </button>
+
+  <div class="controls no-print" id="controls">
     <div><label class="fl">Unit</label><select id="c_unit"></select></div>
     <div><label class="fl">Month</label><select id="c_month"></select></div>
     <div><label class="fl">Year</label><select id="c_year"></select></div>
@@ -431,6 +521,8 @@ i[data-ic]{display:inline-flex;align-items:center;justify-content:center;line-he
 <script>
 /* ═══════════════════ ICONS — inline, no external icon font ═══════════════════ */
 const IC={"scale-balanced": "<svg class=\"ic\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 4v16 M8 20h8 M4 8h16 M4 8l-2.5 5.5h5zM20 8l2.5 5.5h-5z M12 4a1.2 1.2 0 100-.1\"/></svg>", "sliders": "<svg class=\"ic\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 7h9 M17 7h3 M4 12h4 M12 12h8 M4 17h11 M19 17h1\"/><circle cx=\"15\" cy=\"7\" r=\"2\"/><circle cx=\"10\" cy=\"12\" r=\"2\"/><circle cx=\"17\" cy=\"17\" r=\"2\"/></svg>", "hospital": "<svg class=\"ic\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 21V6a1 1 0 011-1h14a1 1 0 011 1v15 M2 21h20 M12 8v6 M9 11h6\"/></svg>", "calendar-check": "<svg class=\"ic\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 6a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1z M4 10h16 M8 3v4 M16 3v4 M9 15l2 2 4-4\"/></svg>", "chart-simple": "<svg class=\"ic\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 20V12 M12 20V5 M19 20v-5\"/></svg>", "list-check": "<svg class=\"ic\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 7l2 2 3-3 M4 17l2 2 3-3 M12 8h8 M12 18h8\"/></svg>", "clock": "<svg class=\"ic\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 21a9 9 0 100-18 9 9 0 000 18z M12 7v5l3.5 2.5\"/></svg>", "arrow-trend-up": "<svg class=\"ic\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 17l6-6 4 4 8-8 M21 7v5h-5\"/></svg>", "user-nurse": "<svg class=\"ic\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 12a4 4 0 100-8 4 4 0 000 8z M4 21c0-4 3.6-6 8-6s8 2 8 6\"/></svg>", "print": "<svg class=\"ic\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M7 8V4h10v4 M6 18H5a1 1 0 01-1-1v-6a1 1 0 011-1h14a1 1 0 011 1v6a1 1 0 01-1 1h-1 M7 15h10v6H7z\"/></svg>", "file-csv": "<svg class=\"ic\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M14 3v5h5 M14 3H6a1 1 0 00-1 1v16a1 1 0 001 1h12a1 1 0 001-1V8z M8 13h8 M8 17h5\"/></svg>", "rotate-left": "<svg class=\"ic\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 5v5h5 M4 10a8 8 0 113 8\"/></svg>", "plus": "<svg class=\"ic\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 5v14 M5 12h14\"/></svg>", "trash": "<svg class=\"ic\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 7h16 M9 7V4h6v3 M6 7l1 14h10l1-14 M10 11v6 M14 11v6\"/></svg>"};
+IC['chevron-down']='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+IC['check']='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4 10-10"/></svg>';
 function icon(n){return IC[n]||''}
 function hydrateIcons(root){
   (root||document).querySelectorAll('i[data-ic]').forEach(el=>{
@@ -464,7 +556,7 @@ function load(){
   }catch(e){UNITS=structuredClone(DEFAULT_UNITS);HOLIDAYS=structuredClone(DEFAULT_HOLIDAYS);CFG={...DEFAULT_CFG}}
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify({units:UNITS,holidays:HOLIDAYS,cfg:CFG}))}catch(e){}}
-function resetAll(){if(!confirm('Restore all defaults? Your edits will be lost.'))return;localStorage.removeItem(KEY);load();boot();hydrateIcons();}
+function resetAll(){if(!confirm('Restore all defaults? Your edits will be lost.'))return;localStorage.removeItem(KEY);load();boot();hydrateIcons();applyControlsMode();}
 
 /* ═══════════════════ DATE HELPERS (NETWORKDAYS.INTL / EOMONTH) ═══════════════════ */
 const iso=d=>d.toISOString().slice(0,10);
@@ -558,6 +650,10 @@ function render(){
   // control notes
   n_wd.textContent=R.wd; n_dim.textContent=R.dim; n_ph.textContent=R.ph;
   n_rf.textContent=R.rfCalc?f2(R.rfCalc):'–';
+  // collapsed-controls summary (phone): everything the hidden panel is set to
+  cs_unit.textContent=CFG.unit;
+  cs_rest.textContent=CFG.month+' '+CFG.year+'  ·  '+CFG.method+'  ·  '+(R.deduct?'actual days':'relief factor');
+
   n_absmode.innerHTML=R.deduct
     ? 'Actual leave days are deducted from <b>Available</b>'
     : 'Relief factor is applied to <b>Required</b>';
@@ -741,18 +837,29 @@ const pct1=n=>(n==null||isNaN(n))?'–':(n*100).toFixed(1)+'%';
 /* ── units table (editable) ── */
 const UCOLS=[['beds',0],['occ',2,'pctinput'],['t1',2,'pctinput'],['r1',0],['r2',0],['fixD',0,'nullable'],['fixN',0,'nullable'],['hppd',1],
              ['n12',0],['ch',0],['n8',0],['al',0],['po',0],['sl',0],['ev',0],['lt',0],['hl',0],['hp',0],['tl',0],['ot',0]];
+/* the phone layout drops the header row, so each cell carries its own label */
+const ULABEL={beds:'Beds',occ:'Occupancy %',t1:'Tier 1 share %',r1:'Tier 1 ratio 1:n',r2:'Tier 2 ratio 1:n',
+  fixD:'Day nurses (fixed)',fixN:'Night nurses (fixed)',hppd:'Target HPPD',n12:'Nurses on 12 h',
+  ch:'Contract h / day',n8:'Nurses on 8 h',al:'Annual leave (days)',po:'Pull-out (days)',sl:'Sick leave (days)',
+  ev:'Evening nurses',lt:'Late nurses',hl:'Hours / leave day',hp:'Hours / pull-out day',
+  tl:'Team leader / shift',ot:'Overtime worked (h)'};
 function renderUnits(){
   const wd=networkdays(true);
   t_units.innerHTML=UNITS.map((U,i)=>{
-    let tds='<td><input type="text" class="uname" value="'+String(U.u).replace(/"/g,'&quot;')+'" data-i="'+i+'" data-k="u"></td>';
+    // the chevron is a phone affordance: it makes this unit the active one and opens its fields
+    let tds='<td><input type="text" class="uname" value="'+String(U.u).replace(/"/g,'&quot;')+'" data-i="'+i+'" data-k="u">'
+      +'<button class="u-pick no-print" onclick="pickUnit('+i+')" aria-label="Open '+String(U.u).replace(/"/g,'&quot;')+'">'
+      +'<i data-ic="'+(U.u===CFG.unit?'check':'chevron-down')+'"></i></button></td>';
     UCOLS.forEach(([k,dec,mode])=>{
       const isPct=mode==='pctinput';
       const val=U[k]==null?'':(isPct?(U[k]*100):U[k]);
-      tds+='<td class="num editable"><input type="number" step="any" value="'+val+'" data-i="'+i+'" data-k="'+k+'" data-pct="'+(isPct?1:0)+'"></td>';
+      tds+='<td class="num editable" data-label="'+ULABEL[k]+'"><input type="number" step="any" value="'+val+
+           '" data-i="'+i+'" data-k="'+k+'" data-pct="'+(isPct?1:0)+'" aria-label="'+ULABEL[k]+'"></td>';
     });
     const rf=reliefFactor(U,wd);
-    tds+='<td class="num muted">'+(rf?f2(rf):'–')+'</td>';
-    tds+='<td class="no-print"><button class="btn btn-sm btn-outline" title="Delete unit" onclick="delUnit('+i+')"><i data-ic="trash"></i></button></td>';
+    tds+='<td class="num muted u-rf" data-label="Relief factor">'+(rf?f2(rf):'–')+'</td>';
+    tds+='<td class="no-print u-del"><button class="btn btn-sm btn-outline" title="Delete unit" onclick="delUnit('+i+')">'+
+         '<i data-ic="trash"></i> <span class="btn-txt-del">Delete unit</span></button></td>';
     return '<tr'+(U.u===CFG.unit?' class="u-active"':'')+'>'+tds+'</tr>';
   }).join('');
   t_units.querySelectorAll('input').forEach(inp=>{
@@ -802,6 +909,15 @@ function delUnit(i){
 }
 /* rebuild the unit dropdown, then recompute */
 function refresh(){ fill(c_unit,UNITS.map(u=>u.u),CFG.unit); render(); }
+/* phone: tapping a unit card makes it active (which also drives the report) and opens it */
+function pickUnit(i){
+  const already=UNITS[i].u===CFG.unit;
+  CFG.unit=UNITS[i].u; refresh();
+  if(!already){
+    const row=t_units.children[i];
+    if(row)row.scrollIntoView({block:'start',behavior:'smooth'});
+  }
+}
 
 /* ── holidays ── */
 function renderHolidays(){
@@ -867,6 +983,20 @@ async function saveFile(base,text){
 
 /* ═══════════════════ BOOT ═══════════════════ */
 function fill(sel,arr,val){sel.innerHTML=arr.map(o=>'<option'+(String(o)===String(val)?' selected':'')+'>'+o+'</option>').join('')}
+/* ── phone: the controls panel starts collapsed so the verdict is above the fold ── */
+const isPhone=()=>matchMedia('(max-width:760px)').matches;
+function toggleControls(){
+  const c=document.getElementById('controls'), open=c.classList.toggle('collapsed');
+  ctlSummary.setAttribute('aria-expanded', open?'false':'true');
+}
+function applyControlsMode(){
+  const c=document.getElementById('controls');
+  if(isPhone()){ if(!c.dataset.init){c.classList.add('collapsed');c.dataset.init='1'} }
+  else { c.classList.remove('collapsed'); delete c.dataset.init }
+  ctlSummary.setAttribute('aria-expanded', c.classList.contains('collapsed')?'false':'true');
+}
+matchMedia('(max-width:760px)').addEventListener('change',applyControlsMode);
+
 function boot(){
   fill(c_unit,UNITS.map(u=>u.u),CFG.unit);
   fill(c_month,MONTHS,CFG.month);
@@ -885,7 +1015,7 @@ document.querySelectorAll('.tab-btn').forEach(b=>b.onclick=()=>{
   b.classList.add('active');
   document.getElementById('tab-'+b.dataset.tab).classList.add('active');
 });
-load();boot();hydrateIcons();
+load();boot();hydrateIcons();applyControlsMode();
 </script>
 </body>
 </html>
