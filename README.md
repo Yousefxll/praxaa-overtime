@@ -4,7 +4,7 @@ A nursing overtime justification model: it compares the hours a unit **requires*
 against the hours it can actually **cover**, and states whether the overtime worked
 is justified.
 
-**Live:** https://YOUSEF.github.io/praxaa-overtime/
+**Live:** https://yousefxll.github.io/praxaa-overtime/
 
 ## What it does
 
