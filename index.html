@@ -128,6 +128,15 @@ i[data-ic]{display:inline-flex;align-items:center;justify-content:center;line-he
 .kpi .val{font-family:var(--font-sans);font-size:1.85rem;font-weight:600;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1}
 .kpi .unit{font-size:.72rem;color:var(--text-light);font-weight:400;margin-left:5px;letter-spacing:0}
 .kpi .foot{font-size:.72rem;color:var(--text-light);margin-top:8px;line-height:1.45}
+.k-edit{background:linear-gradient(180deg,#fff 0%,#FFFDF7 100%)}
+.k-edit .lbl::after{content:' ✎';opacity:.55;letter-spacing:0}
+.kpi .kpi-in{font-family:var(--font-sans);font-size:1.85rem;font-weight:600;letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums;line-height:1;color:var(--text);width:6ch;padding:0 2px;
+  border:none;border-bottom:2px dashed var(--ash);border-radius:0;background:transparent;min-height:0}
+.kpi .kpi-in:focus{outline:none;border-bottom-color:var(--cinnabar);box-shadow:none}
+.kpi .kpi-in::-webkit-outer-spin-button,.kpi .kpi-in::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.kpi .kpi-in{-moz-appearance:textfield;appearance:textfield}
+.kpi .val{display:flex;align-items:baseline;gap:2px;flex-wrap:nowrap}
 
 /* ── gap bar ────────────────────────────────────────── */
 .gapwrap{margin-top:6px}
@@ -287,6 +296,7 @@ i[data-ic]{display:inline-flex;align-items:center;justify-content:center;line-he
 
   /* ── 5. tap targets ≥44px, and 16px text so iOS never zooms on focus ── */
   select,input[type=number],input[type=date],input[type=text],.editable input{font-size:16px;min-height:44px}
+  .kpi .kpi-in{font-size:1.5rem;min-height:40px;width:5.5ch}
   .btn{min-height:44px}
   .btn-sm{min-height:40px;padding:8px 13px}
 
@@ -411,9 +421,9 @@ i[data-ic]{display:inline-flex;align-items:center;justify-content:center;line-he
     <div class="sub">Whether the rooms that were staffed were actually used — the evidence behind the staffing claim.</div>
     <div class="kpis" style="margin-bottom:0">
       <div class="kpi k-req"><div class="lbl">Staffed room-hours</div><div class="val"><span id="o_avail">0</span><span class="unit">h</span></div><div class="foot" id="o_avail_f"></div></div>
-      <div class="kpi k-avail"><div class="lbl">Actual operating hours</div><div class="val"><span id="o_act">0</span><span class="unit">h</span></div><div class="foot" id="o_act_f"></div></div>
+      <div class="kpi k-avail k-edit"><div class="lbl">Actual operating hours</div><div class="val"><input id="in_act" class="kpi-in" type="number" step="any" min="0" inputmode="decimal" aria-label="Actual operating hours"><span class="unit">h</span></div><div class="foot" id="o_act_f"></div></div>
       <div class="kpi k-ot"><div class="lbl">Utilisation</div><div class="val"><span id="o_util">–</span></div><div class="foot" id="o_util_f"></div></div>
-      <div class="kpi k-gap"><div class="lbl">Booked cases</div><div class="val"><span id="o_bk">0</span></div><div class="foot" id="o_bk_f"></div></div>
+      <div class="kpi k-gap k-edit"><div class="lbl">Booked cases</div><div class="val"><input id="in_bk" class="kpi-in" type="number" step="1" min="0" inputmode="numeric" aria-label="Booked cases"></div><div class="foot" id="o_bk_f"></div></div>
     </div>
     <div class="hint" id="o_note" style="margin-top:14px"></div>
   </div>
@@ -751,11 +761,11 @@ function render(){
   if(R.isOR){
     o_avail.textContent=f0(R.roomHoursAvail);
     o_avail_f.textContent=(R.U.orAM||0)+'+'+(R.U.orPM||0)+' rooms × 8 h × '+R.wd+' days, +'+(R.U.orFriAM||0)+' × '+R.reduced+' rest days';
-    o_act.textContent=f0(R.orActual);
+    if(document.activeElement!==in_act) in_act.value=R.orActual||'';
     o_act_f.textContent=R.orActual?'in-room time recorded this month':'enter the month’s actual operating hours';
     o_util.textContent=R.orUtil==null?'–':pct(R.orUtil);
     o_util_f.textContent=R.orUtil==null?'needs actual hours':'of the room-hours the rota paid to staff';
-    o_bk.textContent=f0(R.orBooked);
+    if(document.activeElement!==in_bk) in_bk.value=R.orBooked||'';
     o_bk_f.textContent=R.orAvgCase?f1(R.orAvgCase)+' h average per case':'enter the number of booked cases';
     o_note.innerHTML = R.orUtil==null
       ? 'Fill in <b>OR — booked cases</b> and <b>OR — actual operating hours</b> in the Units tab to compute utilisation.'
@@ -1146,6 +1156,15 @@ function applyControlsMode(){
   ctlSummary.setAttribute('aria-expanded', c.classList.contains('collapsed')?'false':'true');
 }
 matchMedia('(max-width:760px)').addEventListener('change',applyControlsMode);
+
+/* the theatre figures are typed straight into the card that reports on them */
+[['in_act','orActH'],['in_bk','orBooked']].forEach(([id,key])=>{
+  document.getElementById(id).addEventListener('change',e=>{
+    const v=parseFloat(e.target.value);
+    unitRow()[key] = (e.target.value===''||isNaN(v)||v<0) ? 0 : v;
+    render();
+  });
+});
 
 function boot(){
   fill(c_unit,UNITS.map(u=>u.u),CFG.unit);
