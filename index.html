@@ -158,6 +158,9 @@ i[data-ic]{display:inline-flex;align-items:center;justify-content:center;line-he
 .tblwrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);margin-top:4px}
 .tblwrap table{font-size:.8rem}
 .editable{background:#FFFDF7}
+#unitsWrap th.f-off{opacity:.42}
+#unitsWrap td.f-off{opacity:.4}
+#unitsWrap td.f-off input{color:var(--text-light);border-style:dashed}
 #unitsWrap th.or-col{background:#241F1E}
 #unitsWrap td.or-col{background:#FBF7F2}
 #unitsWrap tbody tr:nth-child(even) td.or-col{background:#F7F2EC}
@@ -508,7 +511,8 @@ i[data-ic]{display:inline-flex;align-items:center;justify-content:center;line-he
       </tr></thead>
       <tbody id="t_units"></tbody>
     </table></div>
-    <div class="hint" style="margin-top:12px">Relief factor is calculated: scheduled h ÷ (scheduled h − absence hours per nurse). It only drives the model when <b>Absence handling = Relief factor</b>.</div>
+    <div class="hint" id="unitsHint" style="margin-top:12px;padding:9px 11px;background:var(--row-alt);border:1px solid var(--border);border-radius:8px"></div>
+    <div class="hint" style="margin-top:8px">Relief factor is calculated: scheduled h ÷ (scheduled h − absence hours per nurse). It only drives the model when <b>Absence handling = Relief factor</b>.</div>
   </div>
 </div>
 
@@ -987,6 +991,12 @@ const pct1=n=>(n==null||isNaN(n))?'–':(n*100).toFixed(1)+'%';
 const UCOLS=[['beds',0],['occ',2,'pctinput'],['t1',2,'pctinput'],['r1',0],['r2',0],['fixD',0,'nullable'],['fixN',0,'nullable'],['hppd',1],
              ['n12',0],['ch',0],['n8',0],['al',0],['po',0],['sl',0],['ev',0],['lt',0],['hl',0],['hp',0],['tl',0],['ot',0],
              ['orNPR',0],['orAM',0],['orPM',0],['orTLam',0],['orTLpm',0],['orFriAM',0],['orFriTL',0],['orC',0],['orBooked',0],['orActH',1]];
+/* Which fields a method actually reads. Wards are driven by census, theatres by
+   rooms — showing all of them at once invites filling in the wrong one. */
+const WARD_ONLY=new Set(['beds','occ','t1','r1','r2','fixD','fixN','hppd','ev','lt','tl']);
+const OR_ONLY=new Set(['orNPR','orAM','orPM','orTLam','orTLpm','orFriAM','orFriTL','orC','orBooked','orActH']);
+const fieldOff=k=>CFG.method==='OR (rooms)' ? WARD_ONLY.has(k) : OR_ONLY.has(k);
+
 /* the phone layout drops the header row, so each cell carries its own label */
 const ULABEL={beds:'Beds',occ:'Occupancy %',t1:'Tier 1 share %',r1:'Tier 1 ratio 1:n',r2:'Tier 2 ratio 1:n',
   fixD:'Day nurses (fixed)',fixN:'Night nurses (fixed)',hppd:'Target HPPD',n12:'Nurses on 12 h',
@@ -1009,7 +1019,9 @@ function renderUnits(){
     UCOLS.forEach(([k,dec,mode])=>{
       const isPct=mode==='pctinput';
       const val=U[k]==null?'':(isPct?(U[k]*100):U[k]);
-      tds+='<td class="num editable'+(k.startsWith('or')?' or-col':'')+'" data-label="'+ULABEL[k]+'"><input type="number" step="any" value="'+val+
+      const off=fieldOff(k);
+      tds+='<td class="num editable'+(k.startsWith('or')?' or-col':'')+(off?' f-off':'')+'" data-label="'+ULABEL[k]+
+           '"'+(off?' title="Not used by the current method ('+CFG.method+')"':'')+'><input type="number" step="any" value="'+val+
            '" data-i="'+i+'" data-k="'+k+'" data-pct="'+(isPct?1:0)+'" aria-label="'+ULABEL[k]+'"></td>';
     });
     const rf=reliefFactor(U,wd);
@@ -1018,6 +1030,14 @@ function renderUnits(){
          '<i data-ic="trash"></i> <span class="btn-txt-del">Delete unit</span></button></td>';
     return '<tr class="'+(U.u===CFG.unit?'u-active':'')+(isOpen?' u-open':'')+'">'+tds+'</tr>';
   }).join('');
+  // header cells sit at index i+1 (the Unit column is first)
+  const ths=t_units.closest('table').querySelectorAll('thead th');
+  UCOLS.forEach(([k],i)=>{ if(ths[i+1]) ths[i+1].classList.toggle('f-off',fieldOff(k)); });
+  const hint=document.getElementById('unitsHint');
+  if(hint) hint.innerHTML = CFG.method==='OR (rooms)'
+    ? 'Method is <b>OR (rooms)</b> — the theatre fields drive the model. The dimmed ward fields (beds, occupancy, acuity, HPPD) are <b>ignored</b>; leave them at 0.'
+    : 'Method is <b>'+CFG.method+'</b> — the ward fields drive the model. The dimmed <b>OR</b> fields are ignored until you switch the method to <b>OR (rooms)</b>.';
+
   t_units.querySelectorAll('input').forEach(inp=>{
     inp.onchange=e=>{
       const t=e.target, i=+t.dataset.i, k=t.dataset.k;
