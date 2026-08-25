@@ -419,18 +419,6 @@ i[data-ic]{display:inline-flex;align-items:center;justify-content:center;line-he
     <div class="kpi k-ot"><div class="lbl">Overtime worked</div><div class="val"><span id="k_ot">0</span><span class="unit">h</span></div><div class="foot" id="k_ot_f"></div></div>
   </div>
 
-  <div class="card" id="orCard" style="display:none">
-    <h3><i data-ic="clock"></i> Theatre utilisation</h3>
-    <div class="sub">Whether the rooms that were staffed were actually used — the evidence behind the staffing claim.</div>
-    <div class="kpis" style="margin-bottom:0">
-      <div class="kpi k-req k-edit"><div class="lbl">Allocated room-hours</div><div class="val"><input id="in_alloc" class="kpi-in" type="number" step="any" min="0" inputmode="decimal" aria-label="Allocated room-hours"><span class="unit">h</span></div><div class="foot" id="o_avail_f"></div></div>
-      <div class="kpi k-avail k-edit"><div class="lbl">Actual operating hours</div><div class="val"><input id="in_act" class="kpi-in" type="number" step="any" min="0" inputmode="decimal" aria-label="Actual operating hours"><span class="unit">h</span></div><div class="foot" id="o_act_f"></div></div>
-      <div class="kpi k-ot"><div class="lbl">Utilisation</div><div class="val"><span id="o_util">–</span></div><div class="foot" id="o_util_f"></div></div>
-      <div class="kpi k-gap k-edit"><div class="lbl">Booked cases</div><div class="val"><input id="in_bk" class="kpi-in" type="number" step="1" min="0" inputmode="numeric" aria-label="Booked cases"></div><div class="foot" id="o_bk_f"></div></div>
-    </div>
-    <div class="hint" id="o_note" style="margin-top:14px"></div>
-  </div>
-
   <div class="card">
     <h3><i data-ic="chart-simple"></i> How the deficit is covered</h3>
     <div class="sub">The demand bar split into what the rota absorbs, what overtime paid for, and what stayed uncovered.</div>
@@ -507,7 +495,7 @@ i[data-ic]{display:inline-flex;align-items:center;justify-content:center;line-he
         <th class="num">Nurses 12h</th><th class="num">Contract h/d</th><th class="num">Nurses 8h</th>
         <th class="num">AL (d)</th><th class="num">Pull-out (d)</th><th class="num">Sick (d)</th>
         <th class="num">Evening</th><th class="num">Late</th><th class="num">h/leave d</th><th class="num">h/pull d</th>
-        <th class="num">TL/shift</th><th class="num">OT worked</th><th class="num or-col">OR nurses / room</th><th class="num or-col">OR rooms AM</th><th class="num or-col">OR rooms PM</th><th class="num or-col">OR TL AM</th><th class="num or-col">OR TL PM</th><th class="num or-col">OR rooms rest-day</th><th class="num or-col">OR TL rest-day</th><th class="num or-col">OR C-shift standby</th><th class="num or-col">OR booked</th><th class="num or-col">OR actual hours</th><th class="num or-col">OR allocated h</th><th class="num">Relief f.</th><th class="no-print"></th>
+        <th class="num">TL/shift</th><th class="num">OT worked</th><th class="num or-col">OR nurses / normal day</th><th class="num or-col">OR nurses / rest day</th><th class="num or-col">OR hours / nurse-day</th><th class="num">Relief f.</th><th class="no-print"></th>
       </tr></thead>
       <tbody id="t_units"></tbody>
     </table></div>
@@ -574,9 +562,9 @@ const DEFAULT_UNITS=[
 ];
 const OR_UNIT={u:'Operating Theatre',beds:0,occ:0,t1:0,r1:0,r2:0,fixD:null,fixN:null,hppd:0,
    n12:0,ch:8,n8:0,al:0,po:0,sl:0,ev:0,lt:0,hl:8,hp:12,tl:0,ot:0,
-   orNPR:2,orAM:11,orPM:4,orTLam:4,orTLpm:2,orFriAM:9,orFriTL:4,orC:3,orBooked:0,orActH:0,orAlloc:0};
+   orNormal:34,orRest:18,orShiftH:8};
 /* every unit carries the theatre keys so the units table stays rectangular */
-const OR_KEYS={orNPR:0,orAM:0,orPM:0,orTLam:0,orTLpm:0,orFriAM:0,orFriTL:0,orC:0,orBooked:0,orActH:0,orAlloc:0};
+const OR_KEYS={orNormal:0,orRest:0,orShiftH:8};
 DEFAULT_UNITS.push(structuredClone(OR_UNIT));
 
 const DEFAULT_HOLIDAYS=[{d:'2026-09-23',n:'Saudi National Day'}];
@@ -593,11 +581,16 @@ function load(){
     normalizeUnits((s&&s.v)||1);
   }catch(e){UNITS=structuredClone(DEFAULT_UNITS);HOLIDAYS=structuredClone(DEFAULT_HOLIDAYS);CFG={...DEFAULT_CFG};cardOpen=true;normalizeUnits(SCHEMA)}
 }
-const SCHEMA=2;
+const SCHEMA=3;
 function normalizeUnits(savedVersion){
   UNITS.forEach(u=>{for(const k in OR_KEYS) if(u[k]==null) u[k]=OR_KEYS[k];});
   // one-time: give existing saves the theatre unit, without resurrecting a deliberate delete
   if(savedVersion<2 && !UNITS.some(u=>u.u===OR_UNIT.u)) UNITS.push(structuredClone(OR_UNIT));
+  // v3 replaced the room-based theatre inputs with a per-day headcount
+  if(savedVersion<3) UNITS.forEach(u=>{
+    if(u.u===OR_UNIT.u && !u.orNormal){u.orNormal=OR_UNIT.orNormal;u.orRest=OR_UNIT.orRest;}
+    if(!u.orShiftH) u.orShiftH=8;
+  });
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify({v:SCHEMA,units:UNITS,holidays:HOLIDAYS,cfg:CFG,cardOpen}))}catch(e){}}
 function resetAll(){if(!confirm('Restore all defaults? Your edits will be lost.'))return;localStorage.removeItem(KEY);load();boot();hydrateIcons();applyControlsMode();}
@@ -645,25 +638,16 @@ function compute(){
   const hppdNurses=census*U.hppd/24;                 // D17/D18
 
   const isOR = CFG.method==='OR (rooms)';
-  const npr=U.orNPR||0;
   let shifts;
   if(isOR){
-    /* Theatres are staffed by ROOMS OPEN, not by patient census, and the elective
-       list shrinks on the weekly rest day and public holidays. Each shift therefore
-       carries its own day-count instead of all of them running every day. */
+    /* Theatres are staffed to a headcount per day, and the list shrinks on the weekly
+       rest day and public holidays — so each row carries its own day-count. */
+    const sh=U.orShiftH||8;
     shifts=[
-      {name:'Morning 07:00 – 15:00', h:8, days:wd, rooms:U.orAM, tl:U.orTLam,
-       req:(U.orAM||0)*npr+(U.orTLam||0),
-       basis:(U.orAM||0)+' rooms × '+npr+' nurses + '+(U.orTLam||0)+' team leaders — full elective list'},
-      {name:'Evening 15:00 – 23:00', h:8, days:wd, rooms:U.orPM, tl:U.orTLpm,
-       req:(U.orPM||0)*npr+(U.orTLpm||0),
-       basis:(U.orPM||0)+' rooms × '+npr+' nurses + '+(U.orTLpm||0)+' team leaders — afternoon list'},
-      {name:'Morning — rest day / holiday', h:8, days:reduced, rooms:U.orFriAM, tl:U.orFriTL,
-       req:(U.orFriAM||0)*npr+(U.orFriTL||0),
-       basis:(U.orFriAM||0)+' rooms × '+npr+' nurses + '+(U.orFriTL||0)+' team leaders — reduced list'},
-      {name:'C shift 23:00 – 07:00', h:8, days:dim, rooms:0, tl:0,
-       req:U.orC||0,
-       basis:(U.orC||0)+' nurses on emergency standby — every day of the month'}
+      {name:'Normal day', h:sh, days:wd, req:U.orNormal||0,
+       basis:(U.orNormal||0)+' nurses on duty across the day’s shifts'},
+      {name:'Rest day / public holiday', h:sh, days:reduced, req:U.orRest||0,
+       basis:(U.orRest||0)+' nurses on duty — reduced list plus emergency cover'}
     ];
     shifts.forEach(s=>{s.ratio=s.req; s.hppd=s.req;});
   } else {
@@ -685,16 +669,6 @@ function compute(){
   const required=shifts.reduce((a,s)=>a+s.monthly,0);
   const perDay=dim?required/dim:0;   // identical to the old sum when every shift runs all month
 
-  /* theatre utilisation — the evidence that the staffed rooms were actually used */
-  const roomHoursAuto = isOR ? ((U.orAM||0)+(U.orPM||0))*8*wd + (U.orFriAM||0)*8*reduced : 0;
-  /* Departments define the utilisation denominator differently — allocated block time,
-     morning list only, opened rooms only. Enter yours and the figure matches your report. */
-  const allocOverride = (U.orAlloc||0)>0 ? U.orAlloc : null;
-  const roomHoursAvail = allocOverride!=null ? allocOverride : roomHoursAuto;
-  const orActual=U.orActH||0, orBooked=U.orBooked||0;
-  const orUtil = roomHoursAvail>0 ? orActual/roomHoursAvail : null;
-  const orAvgCase = orBooked>0 ? orActual/orBooked : null;
-  const orCasesPerDay = wd>0 && orBooked ? orBooked/dim : null;
 
   // AVAILABLE
   const perNurse12=U.ch*wd/12;                        // D38  shifts this month
@@ -714,7 +688,7 @@ function compute(){
   const verdict = deficit<=0 ? 'NOT JUSTIFIED' : (ot<=deficit ? 'JUSTIFIED' : 'PARTIALLY JUSTIFIED');
 
   return {U,wd,ph,dim,reduced,rf,rfCalc,census,t1,t2,ratioNurses,hppdNurses,shifts,perDay,required,
-          isOR,npr,roomHoursAvail,roomHoursAuto,allocOverride,orActual,orBooked,orUtil,orAvgCase,orCasesPerDay,incomplete:(U.n12||0)+(U.n8||0)===0,
+          isOR,incomplete:(U.n12||0)+(U.n8||0)===0,
           perNurse12,h12,perNurse8,h8,gross,lAL,lPO,lSL,available,deficit,ot,uncovered,verdict,deduct};
 }
 
@@ -762,26 +736,6 @@ function render(){
     h_verdict.innerHTML='Incomplete <small>NO ROTA ENTERED</small>';
     h_line1.textContent='This unit has no nurses on the 12 h or 8 h rota, so there are no available hours to compare against.';
     h_line2.textContent='Enter the headcount in the Units tab — until then the '+f0(R.required)+' required hours cannot be judged.';
-  }
-
-  // theatre utilisation
-  orCard.style.display = R.isOR ? '' : 'none';
-  if(R.isOR){
-    if(document.activeElement!==in_alloc) in_alloc.value=R.roomHoursAvail||'';
-    o_avail_f.innerHTML = R.allocOverride!=null
-      ? 'your department’s figure — auto would be '+f0(R.roomHoursAuto)+' h <a href="#" onclick="clearAlloc(event)" style="color:var(--cinnabar)">reset</a>'
-      : 'auto: '+(R.U.orAM||0)+'+'+(R.U.orPM||0)+' rooms × 8 h × '+R.wd+' d, +'+(R.U.orFriAM||0)+' × '+R.reduced+' rest d — overwrite to match your report';
-    if(document.activeElement!==in_act) in_act.value=R.orActual||'';
-    o_act_f.textContent=R.orActual?'in-room time recorded this month':'enter the month’s actual operating hours';
-    o_util.textContent=R.orUtil==null?'–':pct(R.orUtil);
-    o_util_f.textContent=R.orUtil==null?'needs actual hours':'of the room-hours the rota paid to staff';
-    if(document.activeElement!==in_bk) in_bk.value=R.orBooked||'';
-    o_bk_f.textContent=R.orAvgCase?f1(R.orAvgCase)+' h average per case':'enter the number of booked cases';
-    o_note.innerHTML = R.orUtil==null
-      ? 'Fill in <b>OR — booked cases</b> and <b>OR — actual operating hours</b> in the Units tab to compute utilisation.'
-      : (R.orUtil<0.7
-         ? 'Utilisation is <b>'+pct(R.orUtil)+'</b>. Below about 70% the rooms were staffed more than they were used, which weakens the case for overtime — check whether every room needed to be open.'
-         : 'Utilisation is <b>'+pct(R.orUtil)+'</b>. The staffed rooms were genuinely in use, which supports the staffing level behind the overtime.');
   }
 
   // kpis
@@ -833,19 +787,11 @@ function render(){
   // ── basis tab
   basis_sub.innerHTML='Method <b>'+CFG.method+'</b> · Absence handling <b>'+CFG.abs+'</b> — the model prevents double counting automatically.';
   t_basis.innerHTML=(R.isOR?[
-    ['Rooms open — morning',f0(R.U.orAM),'theatres running the full elective list'],
-    ['Rooms open — evening',f0(R.U.orPM),'theatres running the afternoon list'],
-    ['Rooms open — rest day / holiday',f0(R.U.orFriAM),'reduced list; the rest of the day is emergency cover'],
-    ['Nurses per room',f0(R.npr),'scrub + circulating'],
-    ['Team leaders — morning',f0(R.U.orTLam),'not counted in the room staffing'],
-    ['Team leaders — evening',f0(R.U.orTLpm),'not counted in the room staffing'],
-    ['Team leaders — rest day',f0(R.U.orFriTL),'not counted in the room staffing'],
-    ['C shift standby nurses',f0(R.U.orC),'emergency cover 23:00 – 07:00, every day'],
-    ['Full-service days',f0(R.wd),'working days — full morning and evening lists'],
-    ['Reduced-service days',f0(R.reduced),'weekly rest day + public holidays'],
-    ['Booked cases',f0(R.orBooked),'cases scheduled this month'],
-    ['Actual operating hours',f0(R.orActual),'recorded in-room time'],
-    ['Theatre utilisation',R.orUtil==null?'–':pct(R.orUtil),'actual hours ÷ staffed room-hours']
+    ['Nurses required — normal day',f0(R.U.orNormal),'headcount on duty across the day’s shifts'],
+    ['Nurses required — rest day / holiday',f0(R.U.orRest),'reduced list plus emergency cover'],
+    ['Hours per nurse-day',f0(R.U.orShiftH),'shift length used for both rows'],
+    ['Normal days this month',f0(R.wd),'working days'],
+    ['Rest days + public holidays',f0(R.reduced),'days in month − working days']
   ]:[
     ['Beds',f0(U.beds),'beds in the unit'],
     ['Average occupancy',pct(U.occ),'% of beds occupied'],
@@ -861,13 +807,13 @@ function render(){
   ]).map(r=>'<tr><td>'+r[0]+'</td><td class="num">'+r[1]+'</td><td class="muted">'+r[2]+'</td></tr>').join('');
 
   th_shifts.innerHTML = R.isOR
-    ? '<tr><th>Shift</th><th class="num">Hours</th><th class="num">Rooms open</th><th class="num">Team leaders</th><th class="num">Nurses required</th><th>Basis</th></tr>'
+    ? '<tr><th>Day type</th><th class="num">Hours</th><th class="num">Days</th><th class="num"></th><th class="num">Nurses required</th><th>Basis</th></tr>'
     : '<tr><th>Shift</th><th class="num">Hours</th><th class="num">Ratio method</th><th class="num">HPPD method</th><th class="num">Nurses required</th><th>Basis</th></tr>';
   t_shifts.innerHTML=R.shifts.map(s=>'<tr><td>'+s.name+'</td><td class="num">'+s.h+'</td><td class="num muted">'+
-    (R.isOR?(s.rooms?f0(s.rooms):'—'):f1(s.ratio))+'</td><td class="num muted">'+
-    (R.isOR?(s.tl?f0(s.tl):'—'):f1(s.hppd))+'</td><td class="num"><b>'+f1(s.req)+'</b></td><td class="muted">'+s.basis+'</td></tr>').join('');
+    (R.isOR?f0(s.days):f1(s.ratio))+'</td><td class="num muted">'+
+    (R.isOR?'':f1(s.hppd))+'</td><td class="num"><b>'+f1(s.req)+'</b></td><td class="muted">'+s.basis+'</td></tr>').join('');
 
-  th_req.innerHTML='<tr><th>Shift</th><th class="num">Nurses</th><th class="num">Shift h</th><th class="num">Per day</th>'
+  th_req.innerHTML='<tr><th>'+(R.isOR?'Day type':'Shift')+'</th><th class="num">Nurses</th><th class="num">Shift h</th><th class="num">Per day</th>'
     +'<th class="num">Days</th><th class="num">Hours / month</th></tr>';
   t_req.innerHTML=R.shifts.map(s=>'<tr><td>'+s.name+'</td><td class="num">'+f1(s.req)+'</td><td class="num">'+s.h+
     '</td><td class="num">'+f1(s.perDay)+'</td><td class="num">'+f0(s.days)+'</td><td class="num">'+f0(s.monthly)+'</td></tr>').join('')
@@ -906,16 +852,11 @@ function renderPrintSheet(R){
   row('ps-r',[['Absence handling','lbl'],[CFG.abs,'sw'],['غيّر المفتاح لتحديد طريقة احتساب الغياب — الموديل يمنع الازدواج تلقائياً ←','ar',3]]);
   if(R.isOR){
     row('ps-head',[['Input'],['Value'],['Unit / reference'],['Days'],['']]);
-    [['Rooms open — morning',f0(U.orAM),'theatres on the full elective list',f0(R.wd)],
-     ['Rooms open — evening',f0(U.orPM),'theatres on the afternoon list',f0(R.wd)],
-     ['Rooms open — rest day / holiday',f0(U.orFriAM),'reduced list; rest of the day is emergency cover',f0(R.reduced)],
-     ['Nurses per room',f0(R.npr),'scrub + circulating',''],
-     ['Team leaders — morning / evening / rest day',f0(U.orTLam)+' / '+f0(U.orTLpm)+' / '+f0(U.orFriTL),'not counted in the room staffing',''],
-     ['C shift standby nurses',f0(U.orC),'emergency cover 23:00 – 07:00',f0(R.dim)],
-     ['Booked cases',f0(R.orBooked),'cases scheduled this month',''],
-     ['Actual operating hours',f0(R.orActual),'recorded in-room time',''],
-     ['Allocated room-hours',f0(R.roomHoursAvail),R.allocOverride!=null?'as reported by the department':'rooms × 8 h × days',''],
-     ['Theatre utilisation',R.orUtil==null?'–':pct(R.orUtil),'actual hours ÷ staffed room-hours','']
+    [['Nurses required — normal day',f0(U.orNormal),'headcount on duty across the day’s shifts',f0(R.wd)],
+     ['Nurses required — rest day / holiday',f0(U.orRest),'reduced list plus emergency cover',f0(R.reduced)],
+     ['Hours per nurse-day',f0(U.orShiftH),'shift length applied to both rows',''],
+     ['Normal days this month',f0(R.wd),'working days — rest days and holidays excluded',''],
+     ['Rest days + public holidays',f0(R.reduced),'days in month − working days','']
     ].forEach(r=>row('ps-r',[[r[0],'lbl'],[r[1],'n'],[r[2],'note'],[r[3],'np'],['','']]));
   } else {
   row('ps-head',[['Input'],['Value'],['Unit / reference'],['Ratio 1:n'],['']]);
@@ -930,9 +871,8 @@ function renderPrintSheet(R){
   sp();
 
   if(R.isOR){
-    row('ps-head',[['Shift'],['Hours'],['Rooms open'],['Team leaders'],['Nurses required']]);
-    R.shifts.forEach(s=>row('ps-r',[[s.name,'lbl'],[String(s.h),'nb'],
-      [s.rooms?f0(s.rooms):'','np dim'],[s.tl?f0(s.tl):'','np dim'],[f1(s.req),'nb']]));
+    row('ps-head',[['Day type'],['Hours'],['Days'],[''],['Nurses required']]);
+    R.shifts.forEach(s=>row('ps-r',[[s.name,'lbl'],[String(s.h),'nb'],[f0(s.days),'np dim'],['',''],[f1(s.req),'nb']]));
   } else {
     row('ps-head',[['Shift'],['Hours'],['Ratio method'],['HPPD method'],['Nurses required']]);
     // a ratio of 0 is #DIV/0! in the workbook — on paper it is left blank, not printed as an error
@@ -950,7 +890,7 @@ function renderPrintSheet(R){
 
   row('ps-band',[['REQUIRED','',5]]);
   if(R.isOR){
-    row('ps-head',[['Shift'],['Nurses'],['Shift h'],['Days'],['Hours / month']]);
+    row('ps-head',[['Day type'],['Nurses'],['Hours'],['Days'],['Hours / month']]);
     R.shifts.forEach(s=>row('ps-r',[[s.name,'lbl n'],[f1(s.req),'n'],[String(s.h),'nb'],[f0(s.days),'np'],[f0(s.monthly),'np']]));
     row('ps-r tot',[['',''],['',''],['Total required','lbl'],['',''],[f0(R.required)+' h','nb']]);
   } else {
@@ -996,11 +936,11 @@ const pct1=n=>(n==null||isNaN(n))?'–':(n*100).toFixed(1)+'%';
 /* ── units table (editable) ── */
 const UCOLS=[['beds',0],['occ',2,'pctinput'],['t1',2,'pctinput'],['r1',0],['r2',0],['fixD',0,'nullable'],['fixN',0,'nullable'],['hppd',1],
              ['n12',0],['ch',0],['n8',0],['al',0],['po',0],['sl',0],['ev',0],['lt',0],['hl',0],['hp',0],['tl',0],['ot',0],
-             ['orNPR',0],['orAM',0],['orPM',0],['orTLam',0],['orTLpm',0],['orFriAM',0],['orFriTL',0],['orC',0],['orBooked',0],['orActH',1],['orAlloc',0]];
+             ['orNormal',0],['orRest',0],['orShiftH',0]];
 /* Which fields a method actually reads. Wards are driven by census, theatres by
    rooms — showing all of them at once invites filling in the wrong one. */
 const WARD_ONLY=new Set(['beds','occ','t1','r1','r2','fixD','fixN','hppd','ev','lt','tl']);
-const OR_ONLY=new Set(['orNPR','orAM','orPM','orTLam','orTLpm','orFriAM','orFriTL','orC','orBooked','orActH','orAlloc']);
+const OR_ONLY=new Set(['orNormal','orRest','orShiftH']);
 const fieldOff=k=>CFG.method==='OR (rooms)' ? WARD_ONLY.has(k) : OR_ONLY.has(k);
 
 /* the phone layout drops the header row, so each cell carries its own label */
@@ -1009,10 +949,7 @@ const ULABEL={beds:'Beds',occ:'Occupancy %',t1:'Tier 1 share %',r1:'Tier 1 ratio
   ch:'Contract h / day',n8:'Nurses on 8 h',al:'Annual leave (days)',po:'Pull-out (days)',sl:'Sick leave (days)',
   ev:'Evening nurses',lt:'Late nurses',hl:'Hours / leave day',hp:'Hours / pull-out day',
   tl:'Team leader / shift',ot:'Overtime worked (h)',
-  orNPR:'OR — nurses per room',orAM:'OR — rooms, morning',orPM:'OR — rooms, evening',
-  orTLam:'OR — team leaders, morning',orTLpm:'OR — team leaders, evening',
-  orFriAM:'OR — rooms, rest day',orFriTL:'OR — team leaders, rest day',
-  orC:'OR — C shift standby nurses',orBooked:'OR — booked cases',orActH:'OR — actual operating hours',orAlloc:'OR — allocated room-hours (0 = auto)'};
+  orNormal:'OR — nurses, normal day',orRest:'OR — nurses, rest day',orShiftH:'OR — hours per nurse-day'};
 function renderUnits(){
   const wd=networkdays(true);
   t_units.innerHTML=UNITS.map((U,i)=>{
@@ -1182,17 +1119,6 @@ function applyControlsMode(){
   ctlSummary.setAttribute('aria-expanded', c.classList.contains('collapsed')?'false':'true');
 }
 matchMedia('(max-width:760px)').addEventListener('change',applyControlsMode);
-
-/* the theatre figures are typed straight into the card that reports on them */
-[['in_act','orActH'],['in_bk','orBooked'],['in_alloc','orAlloc']].forEach(([id,key])=>{
-  document.getElementById(id).addEventListener('change',e=>{
-    const v=parseFloat(e.target.value);
-    unitRow()[key] = (e.target.value===''||isNaN(v)||v<0) ? 0 : v;
-    render();
-  });
-});
-
-function clearAlloc(e){e.preventDefault();unitRow().orAlloc=0;render();}
 
 function boot(){
   fill(c_unit,UNITS.map(u=>u.u),CFG.unit);
