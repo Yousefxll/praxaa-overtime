@@ -618,7 +618,9 @@ function networkdays(useHolidays){
 function unitRow(){return UNITS.find(u=>u.u===CFG.unit)||UNITS[0]}
 function reliefFactor(U,wd){
   const W=U.ch*wd;                                   // scheduled h / nurse / month
-  const absH=((U.al+U.sl)*U.hl + U.po*U.hp)/(U.n12||1);
+  // absence is shared across the WHOLE rota, not just the 12 h nurses
+  const heads=(U.n12||0)+(U.n8||0);
+  const absH=((U.al+U.sl)*U.hl + U.po*U.hp)/(heads||1);
   const den=W-absH;
   return den>0? W/den : null;
 }
