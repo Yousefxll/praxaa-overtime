@@ -512,8 +512,11 @@ i[data-ic]{display:inline-flex;align-items:center;justify-content:center;line-he
     <div style="display:flex;gap:10px;align-items:flex-end;max-width:820px;margin-bottom:18px" class="no-print">
       <div style="flex:1"><label class="fl">From</label><input type="date" id="hd_date"></div>
       <div style="flex:1"><label class="fl">To <span class="muted">(optional)</span></label><input type="date" id="hd_end"></div>
-      <div style="flex:1.4"><label class="fl">Holiday</label><input type="text" id="hd_name" placeholder="e.g. National Day"></div>
+      <div style="flex:1.4"><label class="fl">Holiday</label><select id="hd_name" onchange="pickHolName()"></select></div>
       <button class="btn btn-primary" onclick="addHoliday()"><i data-ic="plus"></i> Add</button>
+    </div>
+    <div class="no-print" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:-6px 0 18px;font-size:.78rem">
+      <span class="muted">Saved names:</span><span id="hol_names" style="display:contents"></span>
     </div>
     <div class="tblwrap"><table>
       <thead><tr><th style="width:30%">Dates</th><th>Holiday</th><th style="width:24%">Falls in</th><th class="no-print" style="width:60px"></th></tr></thead>
@@ -569,18 +572,20 @@ const OR_KEYS={ftS1:0,ftS2:0,ftS3:0,ftShiftH:8,ftUtil:1,ftFTE:1};
 DEFAULT_UNITS.push(structuredClone(OR_UNIT));
 
 const DEFAULT_HOLIDAYS=[{d:'2026-09-23',n:'Saudi National Day'}];
+const DEFAULT_HOLNAMES=['Saudi National Day','Founding Day','Eid al-Fitr','Eid al-Adha'];
 const DEFAULT_CFG={unit:'ER',month:'July',year:2026,rest:'Friday',method:'Fixed',abs:'Deduct actual days'};
 
-let UNITS,HOLIDAYS,CFG;
+let UNITS,HOLIDAYS,HOLNAMES,CFG;
 const KEY='praxaa.ot.v1';
 function load(){
   try{const s=JSON.parse(localStorage.getItem(KEY));
     UNITS=s&&s.units?s.units:structuredClone(DEFAULT_UNITS);
     HOLIDAYS=s&&s.holidays?s.holidays:structuredClone(DEFAULT_HOLIDAYS);
+    HOLNAMES=s&&s.holNames?s.holNames:DEFAULT_HOLNAMES.slice();
     CFG=Object.assign({},DEFAULT_CFG,s&&s.cfg||{});
     cardOpen=(s&&typeof s.cardOpen==='boolean')?s.cardOpen:true;
     normalizeUnits((s&&s.v)||1);
-  }catch(e){UNITS=structuredClone(DEFAULT_UNITS);HOLIDAYS=structuredClone(DEFAULT_HOLIDAYS);CFG={...DEFAULT_CFG};cardOpen=true;normalizeUnits(SCHEMA)}
+  }catch(e){UNITS=structuredClone(DEFAULT_UNITS);HOLIDAYS=structuredClone(DEFAULT_HOLIDAYS);HOLNAMES=DEFAULT_HOLNAMES.slice();CFG={...DEFAULT_CFG};cardOpen=true;normalizeUnits(SCHEMA)}
 }
 const SCHEMA=4;
 function normalizeUnits(savedVersion){
@@ -596,7 +601,7 @@ function normalizeUnits(savedVersion){
     if(!u.ftFTE)  u.ftFTE =(u.u===OR_UNIT.u)?OR_UNIT.ftFTE :1;
   });
 }
-function save(){try{localStorage.setItem(KEY,JSON.stringify({v:SCHEMA,units:UNITS,holidays:HOLIDAYS,cfg:CFG,cardOpen}))}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({v:SCHEMA,units:UNITS,holidays:HOLIDAYS,holNames:HOLNAMES,cfg:CFG,cardOpen}))}catch(e){}}
 function resetAll(){if(!confirm('Restore all defaults? Your edits will be lost.'))return;localStorage.removeItem(KEY);load();boot();hydrateIcons();applyControlsMode();}
 
 /* ═══════════════════ DATE HELPERS (NETWORKDAYS.INTL / EOMONTH) ═══════════════════ */
@@ -878,7 +883,7 @@ function render(){
   ].map(r=>'<tr class="'+(r[5]?'tot-row':'')+'"><td>'+r[0]+'</td><td class="num">'+r[1]+'</td><td class="num '+
     (String(r[2]).startsWith('-')?'neg':'')+'">'+r[2]+'</td><td class="num">'+r[3]+'</td><td class="muted">'+(r[4]||'')+'</td></tr>').join('');
 
-  renderUnits(); renderHolidays(); renderPrintSheet(R); hydrateIcons(); save();
+  renderUnits(); renderHolidays(); renderHolNames(); renderPrintSheet(R); hydrateIcons(); save();
 }
 
 /* ═══════ A4 PRINT SHEET — same block order as the workbook ═══════ */
@@ -1113,12 +1118,29 @@ function renderHolidays(){
       '</td><td class="muted">'+falls+'</td><td class="no-print"><button class="btn btn-sm btn-outline" onclick="delHoliday('+i+')"><i data-ic="trash"></i></button></td></tr>';
   }).join(''):'<tr><td colspan="4" class="muted" style="padding:20px;text-align:center">No public holidays listed.</td></tr>';
 }
+/* saved holiday names — pick from the list instead of retyping */
+const esc=t=>String(t).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
+function renderHolNames(sel){
+  const keep=sel??hd_name.value;
+  hd_name.innerHTML=HOLNAMES.map(n=>'<option>'+esc(n)+'</option>').join('')+'<option value="__new">＋ New name…</option>';
+  if(HOLNAMES.includes(keep))hd_name.value=keep;
+  hol_names.innerHTML=HOLNAMES.length?HOLNAMES.map((n,i)=>'<span class="badge" style="text-transform:none;letter-spacing:0;border-color:var(--border);font-family:inherit">'+esc(n)+
+    ' <a href="#" title="Remove from list" onclick="delHolName('+i+');return false" style="color:inherit;text-decoration:none;margin-left:4px">×</a></span>').join(''):'<span class="muted">none — choose “＋ New name…”</span>';
+}
+function pickHolName(){
+  if(hd_name.value!=='__new')return;
+  const n=(prompt('New holiday name:')||'').trim();
+  if(n&&!HOLNAMES.includes(n)){HOLNAMES.push(n);save();}
+  renderHolNames(n||HOLNAMES[0]);
+}
+function delHolName(i){HOLNAMES.splice(i,1);save();renderHolNames();}
 function addHoliday(){
   const d=hd_date.value; if(!d){alert('Pick a date.');return}
   const e=hd_end.value;
   if(e&&e<d){alert('"To" must be on or after "From".');return}
-  HOLIDAYS.push(e&&e!==d?{d,e,n:hd_name.value||'Public holiday'}:{d,n:hd_name.value||'Public holiday'});
-  hd_date.value='';hd_end.value='';hd_name.value='';render();
+  const n=hd_name.value&&hd_name.value!=='__new'?hd_name.value:'Public holiday';
+  HOLIDAYS.push(e&&e!==d?{d,e,n}:{d,n});
+  hd_date.value='';hd_end.value='';render();
 }
 function delHoliday(i){HOLIDAYS.splice(i,1);render();}
 
